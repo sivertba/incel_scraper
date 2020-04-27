@@ -1,0 +1,10 @@
+#!/bin/bash
+# If you are unable to build the image because of lacking permissions, you might
+# not be member of the docker user group, which can be necessary to perform
+# certain docker actions. To add yourself to the docker user group, run the
+# following command: `sudo usermod -aG docker <username>`. After adding the
+# group you must log out and in again from your user, depending on your desktop
+# environment, this might include logging out of your window manager sessions,
+# or even rebooting.
+
+docker build --network="host" -t hypso-ps .
