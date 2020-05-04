@@ -1,22 +1,33 @@
 # Use Ubuntu 18.04 as a base image
 FROM ubuntu:18.04
 
-#Make a HYPSO user
-RUN adduser --disabled-password --gecos '' hypso && \
-    usermod -aG sudo hypso && \
-    echo "hypso ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+# Install general tools and libraries
+RUN dpkg --add-architecture i386 && apt-get update && apt-get install -y \
+    build-essential \
+    apt-utils \
+    sudo \
+    locales \
+    git
+
+#Make a incel user
+RUN adduser --disabled-password --gecos '' incel && \
+    usermod -aG sudo incel && \
+    echo "incel ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 # Set the locale
 RUN apt-get clean && apt-get update && apt-get install -y locales && \
     locale-gen en_US.UTF-8
+
+# Make non-interactive installation
+ARG DEBIAN_FRONTEND=noninteractive
 
 # Install necessary software to run and test python
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     python-autopep8 \
-    python3-pytest
-#    pylint
+    python3-pytest \
+    pylint
 
 # Set aliases
 RUN echo -e '#!/bin/bash\npip3 "$@"' > /usr/bin/pip && \
@@ -30,6 +41,12 @@ RUN echo -e '#!/bin/bash\npip3 "$@"' > /usr/bin/pip && \
 # Install necessary modules for python via pip
 RUN pip install numpy scipy matplotlib pandas sympy nose
 
+# partitioning to reduce re-build time
+RUN pip install autopep8 pep8 pylint
 
-USER hypso
-WORKDIR /home/hypso/
+# partitioning to reduce re-build time
+RUN pip install selenium beautifulsoup4
+
+
+USER incel
+WORKDIR /home/incel/

@@ -7,4 +7,4 @@
 # environment, this might include logging out of your window manager sessions,
 # or even rebooting.
 
-docker build --network="host" -t hypso-ps .
+docker build --network="host" -t incel .
