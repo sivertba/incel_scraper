@@ -59,9 +59,8 @@ def set_session_parameters(debug_mode=False):
 
 def get_topics(url="", debug_mode=False):
     if url == "" or debug_mode:
-        print("No URL provided!")
         url = "https://incels.co/forums/inceldom-discussion.2/"
-        print("Using: ", url)
+    print("Using: ", url)
 
     filter_page = requests.get(url + "filters")
 

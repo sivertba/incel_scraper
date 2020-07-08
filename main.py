@@ -13,7 +13,7 @@ def main():
     discussion_url, UI, max_pages = islib.set_session_parameters(
         debug_mode=db_mode)
 
-    topics = islib.get_topics()
+    topics = islib.get_topics(discussion_url)
 
     word_dict = {}
     if UI:
