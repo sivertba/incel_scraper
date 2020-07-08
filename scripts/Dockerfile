@@ -39,14 +39,16 @@ RUN echo -e '#!/bin/bash\npip3 "$@"' > /usr/bin/pip && \
 
 
 # Install necessary modules for python via pip
-RUN pip install numpy scipy matplotlib pandas sympy nose
+RUN pip3 install numpy scipy matplotlib pandas sympy nose
 
 # partitioning to reduce re-build time
-RUN pip install autopep8 pep8 pylint
+RUN pip3 install autopep8 pep8 pylint
 
 # partitioning to reduce re-build time
-RUN pip install selenium beautifulsoup4
+RUN pip3 install selenium beautifulsoup4
 
+# partitioning to reduce re-build time
+RUN pip3 install requests lxml
 
 USER incel
 WORKDIR /home/incel/
