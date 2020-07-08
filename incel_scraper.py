@@ -1,7 +1,15 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud, STOPWORDS
+from nltk.corpus import stopwords
 import header
-# import urllib.request
 import requests
 from bs4 import BeautifulSoup
+import nltk
+import csv
+
+nltk.download('stopwords')
+
 
 ############## User Interface Procedures ##############
 
@@ -18,8 +26,35 @@ def start_up_prompt():
     print("                                           ")
 
 
-def get_discussion_url():
-    return input("What is the URL for the discussion site: ")
+def set_session_parameters(debug_mode=False):
+    if debug_mode:
+        url = "https://incels.co/forums/inceldom-discussion.2/"
+        UI = True
+        max_pages = 9999
+    else:
+        try:
+            url = input("What is the URL for the discussion site: ")
+            UI_ans = input("Do you want UI (y/n): ")
+            if UI_ans == 'y':
+                UI = True
+            elif UI_ans == 'n':
+                UI = False
+            else:
+                raise ValueError('Not valid')
+            max_pages = int(input("Set max page depth: "))
+        except BaseException:
+            url, UI, max_pages = set_session_parameters()
+
+        if isinstance(
+                UI,
+                bool) and isinstance(
+                max_pages,
+                int) and max_pages >= 1:
+            pass
+        else:
+            url, UI, max_pages = set_session_parameters()
+
+    return url, UI, max_pages
 
 
 def get_topics(url="", debug_mode=False):
@@ -43,7 +78,6 @@ def get_topics(url="", debug_mode=False):
             topic_end = ']'
             topic = str_opt[str_opt.find(
                 topic_start) + len(topic_start):str_opt.rfind(topic_end)]
-            # print(topic)
 
             # Get topic prefix id
             prefix_start = 'value="'
@@ -57,11 +91,10 @@ def get_topics(url="", debug_mode=False):
 
 
 def select_topic(topics_dict, debug_mode=False):
-    print("The available topics are:")
-    for key in topics_dict:
-        print('\t', key, topics_dict[key])
-
     if not debug_mode:
+        print("The available topics are:")
+        for key in topics_dict:
+            print('\t', key, topics_dict[key])
         topic_id = input("Which topic would you like to scrape: ")
     else:
         topic_id = "1"
@@ -74,28 +107,34 @@ def select_topic(topics_dict, debug_mode=False):
 ############## Scraping Procedures ##############
 
 
-def scrape_topic_headers(base_url, topic_id, topic, debug_mode=False):
+def scrape_topic_headers(
+        base_url,
+        topic_id,
+        topic,
+        max_pages=9999,
+        debug_mode=False):
     if debug_mode:
         num_pages = 1
     else:
         num_pages = get_number_of_topic_pages(base_url, topic_id, topic)
+        num_pages = min(num_pages, max_pages)
 
     words = []
-    for ii in range(1,num_pages+1):
+    for ii in range(1, num_pages + 1):
         page_id = str(ii)
-        print("Scraping page", page_id,"/",num_pages, "on", topic)
-        words += scrape_words_on_page(base_url, topic_id, topic, page_id)
+        print("Scraping page", page_id, "/", num_pages, "on", topic)
+        words += scrape_words_of_title(base_url, topic_id, topic, page_id)
 
     return words
 
 
-def scrape_words_on_page(base_url, topic_id, topic, page_id):
+def scrape_words_of_title(base_url, topic_id, topic, page_id):
     page_url = base_url + "page-" + page_id + "?prefix_id=" + topic_id
     page = requests.get(page_url)
     soup = BeautifulSoup(page.text, 'lxml')
 
     all_words = []
-    all_post_urls =[]
+    all_post_urls = []
     for tag in soup.find_all('a', href=True):
         tag_str = str(tag)
 
@@ -110,14 +149,13 @@ def scrape_words_on_page(base_url, topic_id, topic, page_id):
                 words = title.split(' ')
                 all_words += words
 
-                post_url = base_url+'threads/'+title_str+'/'
+                post_url = base_url + 'threads/' + title_str + '/'
                 all_post_urls += [post_url]
 
         except UnicodeEncodeError:
             pass
 
     return all_words
-
 
 
 def get_number_of_topic_pages(base_url, topic_id, topic):
@@ -138,3 +176,48 @@ def get_number_of_topic_pages(base_url, topic_id, topic):
             pass
 
     return num_pages
+
+############## Formating Procedures ##############
+
+
+def filter_words(words):
+    s = set(stopwords.words('english'))
+    subset_words = list(filter(lambda w: w not in s, words))
+    subset_words = [x for x in subset_words if any(c.isalpha() for c in x)]
+    return list(subset_words)
+
+
+def words_to_wordcloud(words, topic):
+    list_words = list(words)
+    concat_words = " ".join(list_words)
+    wordcloud = WordCloud(width=1200, height=1200,
+                          background_color='white',
+                          min_font_size=10).generate(concat_words)
+
+    # plot the WordCloud image
+    plt.figure(figsize=(8, 8), facecolor=None)
+    plt.title("Topic: "+topic)
+    plt.imshow(wordcloud)
+    plt.axis("off")
+    plt.tight_layout(pad=0)
+
+    plt.savefig('results/' + topic + '_wordcloud.png')
+
+
+def words_to_csv(words, topic):
+    list_words = list(words)
+    set_of_words = set(list_words)
+
+    word_count_dict = {}
+    for e in set_of_words:
+        word_count_dict[e] = list_words.count(e)
+
+    csv_columns = ['Word','Count']
+    csv_file = 'results/'+topic+"_wordcount.csv"
+
+    try:
+        with open(csv_file, 'w') as f:
+            for key in word_count_dict.keys():
+                f.write("%s,%s\n"%(key,word_count_dict[key]))
+    except IOError:
+        print("I/O error")
