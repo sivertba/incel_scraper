@@ -49,6 +49,8 @@ RUN pip3 install selenium beautifulsoup4
 
 # partitioning to reduce re-build time
 RUN pip3 install requests lxml
+RUN pip3 install nltk
+RUN pip3 install wordcloud
 
 USER incel
 WORKDIR /home/incel/
