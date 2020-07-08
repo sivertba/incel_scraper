@@ -116,7 +116,10 @@ def scrape_topic_headers(
     if debug_mode:
         num_pages = 1
     else:
-        num_pages = get_number_of_topic_pages(base_url, topic_id, topic)
+        try:
+            num_pages = get_number_of_topic_pages(base_url, topic_id, topic)
+        except:
+            num_pages = 1
         num_pages = min(num_pages, max_pages)
 
     words = []
