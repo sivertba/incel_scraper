@@ -31,6 +31,7 @@ def main():
 
         print("\tCounting words from ", t_name)
         islib.words_to_csv(word_dict[t_name], t_name)
+        islib.words_to_csv(filtered_words, t_name+'_filtered')
 
         print("\tWordclouding words from ", t_name)
         islib.words_to_wordcloud(filtered_words, t_name)
