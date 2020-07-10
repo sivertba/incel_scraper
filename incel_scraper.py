@@ -1,6 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-from wordcloud import WordCloud, STOPWORDS
+from wordcloud import WordCloud
 from nltk.corpus import stopwords
 import header
 import requests
@@ -29,32 +29,30 @@ def start_up_prompt():
 def set_session_parameters(debug_mode=False):
     if debug_mode:
         url = "https://incels.co/forums/inceldom-discussion.2/"
-        UI = True
+        ui = True
         max_pages = 9999
     else:
         try:
             url = input("What is the URL for the discussion site: ")
-            UI_ans = input("Do you want UI (y/n): ")
-            if UI_ans == 'y':
-                UI = True
-            elif UI_ans == 'n':
-                UI = False
+            ui_ans = input("Do you want ui (y/n): ")
+            if ui_ans == 'y':
+                ui = True
+            elif ui_ans == 'n':
+                ui = False
             else:
                 raise ValueError('Not valid')
             max_pages = int(input("Set max page depth: "))
         except BaseException:
-            url, UI, max_pages = set_session_parameters()
+            url, ui, max_pages = set_session_parameters()
 
         if isinstance(
-                UI,
-                bool) and isinstance(
-                max_pages,
-                int) and max_pages >= 1:
+                ui, bool) and isinstance(
+                max_pages, int) and max_pages >= 1:
             pass
         else:
-            url, UI, max_pages = set_session_parameters()
+            url, ui, max_pages = set_session_parameters()
 
-    return url, UI, max_pages
+    return url, ui, max_pages
 
 
 def get_topics(url="", debug_mode=False):
@@ -117,7 +115,7 @@ def scrape_topic_headers(
     else:
         try:
             num_pages = get_number_of_topic_pages(base_url, topic_id, topic)
-        except:
+        except BaseException:
             num_pages = 1
         num_pages = min(num_pages, max_pages)
 
@@ -125,6 +123,11 @@ def scrape_topic_headers(
     for ii in range(1, num_pages + 1):
         page_id = str(ii)
         print("Scraping page", page_id, "/", num_pages, "on", topic)
+        # progress = int(page_id) / int(num_pages) * 100
+        # print(topic, 'scraping progress [%d%%]\r'%progress, end="")
+        # if progress == 100:
+        #     print("")
+
         words += scrape_words_of_title(base_url, topic_id, topic, page_id)
 
     return words
@@ -183,7 +186,7 @@ def get_number_of_topic_pages(base_url, topic_id, topic):
 
 
 def filter_words(words):
-    s = set(stopwords.words('english'))
+    s = set(stopwords.words('english')).union(set(stopwords.words('custom')))
     subset_words = list(filter(lambda w: w not in s, words))
     subset_words = [x for x in subset_words if any(c.isalpha() for c in x)]
     return list(subset_words)
@@ -198,7 +201,7 @@ def words_to_wordcloud(words, topic):
 
     # plot the WordCloud image
     plt.figure(figsize=(8, 8), facecolor=None)
-    plt.title("Topic: "+topic)
+    plt.title("Topic: " + topic)
     plt.imshow(wordcloud)
     plt.axis("off")
     plt.tight_layout(pad=0)
@@ -214,12 +217,12 @@ def words_to_csv(words, topic):
     for e in set_of_words:
         word_count_dict[e] = list_words.count(e)
 
-    csv_columns = ['Word','Count']
-    csv_file = 'results/'+topic+"_wordcount.csv"
+    csv_columns = ['Word', 'Count']
+    csv_file = 'results/' + topic + "_wordcount.csv"
 
     try:
         with open(csv_file, 'w') as f:
             for key in word_count_dict.keys():
-                f.write("%s,%s\n"%(key,word_count_dict[key]))
+                f.write("%s,%s\n" % (key, word_count_dict[key]))
     except IOError:
         print("I/O error")

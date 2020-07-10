@@ -1,30 +1,58 @@
-import matplotlib.pyplot as plt
-import incel_scraper as islib  # Glorious abbriviation
 import os
+import incel_scraper as islib  # Glorious abbriviation
 
-db_mode = False
+DB_MODE = False
 
 
 def main():
     if not os.path.exists('results'):
         os.makedirs('results')
 
+    if DB_MODE:
+        s_or_l = 's'
+    else:
+        s_or_l = input("Do you want to scrape or load data (s/l): ")
+
+    if s_or_l == 's':
+        word_dict = scrape()
+    elif s_or_l == 'l':
+        print("Not yet implemented ...")
+        print("Will scrape instead ")
+        word_dict = scrape()
+        pass
+    else:
+        print('Unintelligble input, will scrape data')
+        word_dict = scrape()
+
+    print("")
+    for t_name in word_dict:
+        print("\tFiltering words from ", t_name)
+        filtered_words = islib.filter_words(word_dict[t_name])
+
+        print("\tCounting words from ", t_name)
+        islib.words_to_csv(word_dict[t_name], t_name)
+
+        print("\tWordclouding words from ", t_name)
+        islib.words_to_wordcloud(filtered_words, t_name)
+
+
+def scrape():
     islib.start_up_prompt()
-    discussion_url, UI, max_pages = islib.set_session_parameters(
-        debug_mode=db_mode)
+    discussion_url, ui, max_pages = islib.set_session_parameters(
+        debug_mode=DB_MODE)
 
     topics = islib.get_topics(discussion_url)
 
     word_dict = {}
-    if UI:
+    if ui:
         topic_id, topic = islib.select_topic(
-        topics, debug_mode=db_mode)
+            topics, debug_mode=DB_MODE)
         words = islib.scrape_topic_headers(
             discussion_url,
             topic_id,
             topic,
             max_pages=max_pages,
-            debug_mode=db_mode)
+            debug_mode=DB_MODE)
         word_dict[topics[topic_id]] = words
     else:
         for t_id in topics:
@@ -33,17 +61,9 @@ def main():
                 t_id,
                 topics[t_id],
                 max_pages=max_pages,
-                debug_mode=db_mode)
+                debug_mode=DB_MODE)
             word_dict[topics[t_id]] = words
+    return word_dict
 
-    for t_name in word_dict:
-        print("Filtering words from ", t_name)
-        filtered_words = islib.filter_words(word_dict[t_name])
-
-        print("counting words from ", t_name)
-        islib.words_to_csv(filtered_words, t_name)
-
-        print("Wordclouding words from ", t_name)
-        islib.words_to_wordcloud(filtered_words, t_name)
 
 main()
