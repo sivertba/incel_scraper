@@ -34,6 +34,9 @@ def set_session_parameters(debug_mode=False):
     else:
         try:
             url = input("What is the URL for the discussion site: ")
+            if url == "":
+                url = "https://incels.co/forums/inceldom-discussion.2/"
+
             ui_ans = input("Do you want ui (y/n): ")
             if ui_ans == 'y':
                 ui = True
@@ -41,7 +44,9 @@ def set_session_parameters(debug_mode=False):
                 ui = False
             else:
                 raise ValueError('Not valid')
+
             max_pages = int(input("Set max page depth: "))
+
         except BaseException:
             url, ui, max_pages = set_session_parameters()
 
