@@ -1,15 +1,25 @@
+import csv
+import os
+
 import pandas as pd
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 from nltk.corpus import stopwords
-import header
 import requests
 from bs4 import BeautifulSoup
 import nltk
-import csv
 
-nltk.download('stopwords')
+nltk_data_custom = os.path.dirname(os.path.abspath(__file__)) +\
+    os.path.sep + 'nltk_data' + os.path.sep + 'corpora' + os.path.sep +\
+    'stopwords' + os.path.sep + 'custom'
 
+custom_stopwords = []
+with open(nltk_data_custom, 'r') as f:
+    for line in f:
+        for word in line.split():
+            custom_stopwords.append(word)
+
+stopwords = set(stopwords.words('english')).union(custom_stopwords)
 
 ############## User Interface Procedures ##############
 
@@ -52,7 +62,7 @@ def set_session_parameters(debug_mode=False):
 
         if isinstance(
                 ui, bool) and isinstance(
-                max_pages, int) and max_pages >= 1:
+                    max_pages, int) and max_pages >= 1:
             pass
         else:
             url, ui, max_pages = set_session_parameters()
@@ -191,7 +201,8 @@ def get_number_of_topic_pages(base_url, topic_id, topic):
 
 
 def filter_words(words):
-    s = set(stopwords.words('english')).union(set(stopwords.words('custom')))
+    #s = set(stopwords.words('english')).union(set(stopwords.words('custom')))
+    s = stopwords
     subset_words = list(filter(lambda w: w not in s, words))
     subset_words = [x for x in subset_words if any(c.isalpha() for c in x)]
     return list(subset_words)
