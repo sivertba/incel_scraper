@@ -9,6 +9,8 @@ import requests
 from bs4 import BeautifulSoup
 import nltk
 
+nltk.download('stopwords')
+
 nltk_data_custom = os.path.dirname(os.path.abspath(__file__)) +\
     os.path.sep + 'nltk_data' + os.path.sep + 'corpora' + os.path.sep +\
     'stopwords' + os.path.sep + 'custom'
