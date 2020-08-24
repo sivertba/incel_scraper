@@ -48,22 +48,24 @@ def scrape():
     if ui:
         topic_id, topic = islib.select_topic(
             topics, debug_mode=DB_MODE)
-        words = islib.scrape_topic_headers(
+        words, df = islib.scrape_topic_headers(
             discussion_url,
             topic_id,
             topic,
             max_pages=max_pages,
             debug_mode=DB_MODE)
         word_dict[topics[topic_id]] = words
+        df.to_csv('results/'+topic+'_record.csv')
     else:
         for t_id in topics:
-            words = islib.scrape_topic_headers(
+            words, df = islib.scrape_topic_headers(
                 discussion_url,
                 t_id,
                 topics[t_id],
                 max_pages=max_pages,
                 debug_mode=DB_MODE)
             word_dict[topics[t_id]] = words
+            df.to_csv('results/'+topics[t_id]+'_record.csv')
     return word_dict
 
 

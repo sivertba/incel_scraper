@@ -9,6 +9,13 @@ import requests
 from bs4 import BeautifulSoup
 import nltk
 
+try:
+    from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+    vaderModuleFound = True
+except:
+    vaderModuleFound = False
+
+
 nltk.download('stopwords')
 
 nltk_data_custom = os.path.dirname(os.path.abspath(__file__)) +\
@@ -128,7 +135,7 @@ def scrape_topic_headers(
         max_pages=9999,
         debug_mode=False):
     if debug_mode:
-        num_pages = 1
+        num_pages = 2
     else:
         try:
             num_pages = get_number_of_topic_pages(base_url, topic_id, topic)
@@ -137,6 +144,7 @@ def scrape_topic_headers(
         num_pages = min(num_pages, max_pages)
 
     words = []
+    df_fin = pd.DataFrame()
     for ii in range(1, num_pages + 1):
         page_id = str(ii)
         print("Scraping page", page_id, "/", num_pages, "on", topic)
@@ -146,8 +154,9 @@ def scrape_topic_headers(
         #     print("")
 
         words += scrape_words_of_title(base_url, topic_id, topic, page_id)
-
-    return words
+        df_entry = df_dict_of_title(base_url, topic_id, topic, page_id)
+        df_fin = pd.concat([df_fin, df_entry], axis=0)
+    return words, df_fin
 
 
 def scrape_words_of_title(base_url, topic_id, topic, page_id):
@@ -178,6 +187,63 @@ def scrape_words_of_title(base_url, topic_id, topic, page_id):
             pass
 
     return all_words
+
+def df_dict_of_title(base_url, topic_id, topic, page_id):
+    page_url = base_url + "page-" + page_id + "?prefix_id=" + topic_id
+    page = requests.get(page_url)
+    soup = BeautifulSoup(page.text, 'lxml')
+
+    if vaderModuleFound:
+        analyzer = SentimentIntensityAnalyzer()
+
+    # df_columns=['title', 'url', 'neg', 'neu',
+    #             'pos', 'compound', 'time']
+
+    df_frame = pd.DataFrame()
+    df_dict = dict()
+    for tag in soup.find_all('a', href=True):
+        tag_str = str(tag)
+
+        try:
+            if 'data-preview-url' in tag_str:
+                title_start = 'data-preview-url="/threads/'
+                title_end = '/preview'
+                title_str = tag_str[tag_str.find(
+                    title_start) + len(title_start):tag_str.rfind(title_end)]
+                title = title_str.replace('-', ' ').split('.')[0]
+
+                post_url = base_url + 'threads/' + title_str + '/'
+
+                df_dict['title'] = title
+                df_dict['url'] = post_url
+
+                if vaderModuleFound:
+                    vs = analyzer.polarity_scores(title)
+                    df_dict['neg'] = vs['neg']
+                    df_dict['neu'] = vs['neu']
+                    df_dict['pos'] = vs['pos']
+                    df_dict['compound'] = vs['compound']
+
+
+            elif 'data-date-string' in tag_str:
+                time_start = 'title="'
+                time_end = '"'
+                time_str = tag_str[tag_str.find(
+                    time_start) + len(time_start):tag_str.rfind(time_end)]
+                df_dict['time'] = time_str
+
+                if len(df_dict.keys()) == 1:
+                    continue
+
+                df_row = pd.DataFrame.from_dict(df_dict,
+                                                orient='index')
+                df_frame = pd.concat([df_frame,df_row],axis=1)
+                df_dict = dict()
+
+        except UnicodeEncodeError:
+            pass
+
+    return pd.DataFrame.transpose(df_frame)
 
 
 def get_number_of_topic_pages(base_url, topic_id, topic):
