@@ -154,7 +154,7 @@ def scrape_topic_headers(
         #     print("")
 
         words += scrape_words_of_title(base_url, topic_id, topic, page_id)
-        df_entry = df_dict_of_title(base_url, topic_id, topic, page_id)
+        df_entry = df_dict_from_entry(base_url, topic_id, topic, page_id)
         df_fin = pd.concat([df_fin, df_entry], axis=0)
     return words, df_fin
 
@@ -188,7 +188,7 @@ def scrape_words_of_title(base_url, topic_id, topic, page_id):
 
     return all_words
 
-def df_dict_of_title(base_url, topic_id, topic, page_id):
+def df_dict_from_entry(base_url, topic_id, topic, page_id):
     page_url = base_url + "page-" + page_id + "?prefix_id=" + topic_id
     page = requests.get(page_url)
     soup = BeautifulSoup(page.text, 'lxml')
@@ -200,21 +200,75 @@ def df_dict_of_title(base_url, topic_id, topic, page_id):
     #             'pos', 'compound', 'time']
 
     df_frame = pd.DataFrame()
+
+    replies = False
     df_dict = dict()
-    for tag in soup.find_all('a', href=True):
+
+    for tag in soup.find_all():
         tag_str = str(tag)
 
         try:
-            if 'data-preview-url' in tag_str:
-                title_start = 'data-preview-url="/threads/'
-                title_end = '/preview'
+            if '<dt>Replies</dt>' in tag_str:
+                replies = True
+
+            if '<div class="structItem-title" uix-data-href=' in tag_str:
+                if len(df_dict.keys()) <= 1:
+                    df_dict = dict()
+                elif vaderModuleFound and len(df_dict.keys()) == 10:
+                    df_row = pd.DataFrame.from_dict(df_dict,
+                                                    orient='index')
+                    df_frame = pd.concat([df_frame,df_row],axis=1)
+                    df_dict = dict()
+
+                elif len(df_dict.keys()) == 7:
+                    df_row = pd.DataFrame.from_dict(df_dict,
+                                                    orient='index')
+                    df_frame = pd.concat([df_frame,df_row],axis=1)
+                    df_dict = dict()
+
+                title_start = 'uix-data-href="/threads/'
+                title_end = '/">'
                 title_str = tag_str[tag_str.find(
                     title_start) + len(title_start):tag_str.rfind(title_end)]
                 title = title_str.replace('-', ' ').split('.')[0]
 
-                post_url = base_url + 'threads/' + title_str + '/'
-
                 df_dict['title'] = title
+
+            elif'<dd>' in tag_str:
+                if replies:
+                    r_num = tag_str.split('>')[1].split('<')[0]
+                    if not any( e.isdigit() for e in r_num ):
+                        continue
+                    else:
+                        r_num = r_num.replace('K','000')
+                        r_num = r_num.replace('M','000000')
+                        df_dict["replies"] = float(r_num)
+                        replies = False
+
+                else:
+                    v_num = tag_str.split('>')[1].split('<')[0]
+                    if not any( e.isdigit() for e in v_num ):
+                        continue
+                    else:
+                        v_num = v_num.replace('K','000')
+                        v_num = v_num.replace('M','000000')
+                        df_dict["views"] = float(v_num)
+                        replies = True
+
+            elif '<li><span class="username">' in tag_str:
+                uname = tag_str.split("</span></span></li>")[0].split('">')[-1]
+                df_dict['op_username'] = uname
+
+
+            elif 'rel="nofollow"><time class="structItem-latestDate u-dt"' in tag_str:
+                time_start = 'data-date-string="'
+                time_end = '"'
+                time_str = tag_str[tag_str.find(
+                    time_start) + len(time_start):tag_str.rfind(time_end)]
+                df_dict['date'] = time_str.split('"')[0]
+
+                #just to get them in the right order
+                post_url = 'https://incels.co/threads/' + title_str.split('">')[0]
                 df_dict['url'] = post_url
 
                 if vaderModuleFound:
@@ -223,22 +277,6 @@ def df_dict_of_title(base_url, topic_id, topic, page_id):
                     df_dict['neu'] = vs['neu']
                     df_dict['pos'] = vs['pos']
                     df_dict['compound'] = vs['compound']
-
-
-            elif 'data-date-string' in tag_str:
-                time_start = 'title="'
-                time_end = '"'
-                time_str = tag_str[tag_str.find(
-                    time_start) + len(time_start):tag_str.rfind(time_end)]
-                df_dict['time'] = time_str
-
-                if len(df_dict.keys()) == 1:
-                    continue
-
-                df_row = pd.DataFrame.from_dict(df_dict,
-                                                orient='index')
-                df_frame = pd.concat([df_frame,df_row],axis=1)
-                df_dict = dict()
 
         except UnicodeEncodeError:
             pass
